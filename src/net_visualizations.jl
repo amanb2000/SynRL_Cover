@@ -39,7 +39,7 @@ end
 takes in a real coordinate-defined set of network points (organized in layers)
 called `node pts` and draws em in 3D space. 
 """
-function draw_real_lines(node_pts, meta, color, weight)
+function draw_real_lines(node_pts, meta, color, weight, rnd=true)
 	setcolor(color)
 	setline(weight)
 	for i = 1:length(node_pts)-1
@@ -47,8 +47,14 @@ function draw_real_lines(node_pts, meta, color, weight)
 			for post in node_pts[i+1]
 				p1 = Point(real_to_perc(pre, meta)...)
 				p2 = Point(real_to_perc(post, meta)...)
-
+				if rand() < 0.1
+					# println("ccolorp")
+					alpha = (color[4]*3 + 1.)*0.25
+					colorp = (1., 0., 0., alpha)
+					setcolor(colorp)
+				end
 				line(p1,p2, :stroke)
+				setcolor(color)
 			end	
 		end
 
@@ -96,5 +102,30 @@ end
 
 
 
+"""
+"""
+function push_nodes(real_node_poss, S, starttime, endtime; learning_rate=0.1, random_move=0)
+	nnodes = deepcopy(real_node_poss) # new nodes to return, adjusted
+	for l = 1:length(nnodes)-1
+		for i = 1:length(nnodes[l])
+			for j = 1:length(nnodes[l+1])
+				perturbation = float(sum(S[l][j,i].previous_actions[starttime:endtime]))
+				vec1 = nnodes[l][i]
+				vec2 = nnodes[l+1][j] 
 
+				meanvec = (vec1+vec2)*0.5 
 
+				α = learning_rate*perturbation/length(nnodes[l+1]) # actual learning rate, incorporating
+							# amount of perturbation.
+				
+				nnodes[l][i] = (1-α)*vec1 + α*meanvec + rand(3)*random_move
+
+				α = learning_rate*perturbation/length(nnodes[l]) # actual learning rate, incorporating
+							# amount of perturbation.
+				nnodes[l+1][j] = (1-α)*vec2 + α*meanvec + rand(3)*random_move
+			end
+		end
+	end
+
+	return nnodes
+end
